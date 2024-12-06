@@ -180,6 +180,23 @@
             <div class="input-group">
                 <label for="nameInput">Single Recipient Name:</label>
                 <input type="text" id="nameInput" placeholder="Enter name">
+                
+                <!-- Name Font Controls -->
+                <div class="font-controls">
+                    <div>
+                        <label for="nameFontSize">Name Font Size:</label>
+                        <input type="number" id="nameFontSize" value="60" min="8" max="200">
+                    </div>
+                    <div>
+                        <label for="nameFontFamily">Name Font Family:</label>
+                        <select id="nameFontFamily">
+                            <option value="Arial">Arial</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Courier New">Courier New</option>
+                            <option value="Georgia">Georgia</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <!-- Issue Number Settings -->
@@ -345,8 +362,10 @@
 
             // Draw recipient name
             const recipientName = (name || document.getElementById('nameInput').value).toUpperCase();
-            const nameSize = canvas.height * 0.08;
-            ctx.font = `bold ${nameSize}px Arial`;
+            const nameFontSize = parseInt(document.getElementById('nameFontSize').value);
+            const nameFontFamily = document.getElementById('nameFontFamily').value;
+            
+            ctx.font = `bold ${nameFontSize}px ${nameFontFamily}`;
             ctx.textAlign = 'center';
             ctx.fillStyle = document.getElementById('textColor').value;
             
@@ -411,13 +430,13 @@
         }
 
         // Real-time updates for all controls
-        const updateControls = ['nameInput', 'textColor', 'numberPrefix', 'startNumber', 
-            'numberPadding', 'numberX', 'numberY', 'numberFontSize', 'numberFontFamily'];
+        const updateControls = ['nameInput', 'nameFontSize', 'nameFontFamily', 
+            'textColor', 'numberPrefix', 'startNumber', 'numberPadding', 
+            'numberX', 'numberY', 'numberFontSize', 'numberFontFamily'];
         
         updateControls.forEach(controlId => {
             const element = document.getElementById(controlId);
-            if (element) {
-                element.addEventListener('input', generateCertificate);
+            if (element) {element.addEventListener('input', generateCertificate);
                 element.addEventListener('change', generateCertificate);
             }
         });
