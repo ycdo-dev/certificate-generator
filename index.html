@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .control-panel {
+            margin-bottom: 20px;
+            display: grid;
+            gap: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        input, button, select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .position-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .coordinate-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .coordinate-input {
+            width: 80px;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .certificate-container {
+            position: relative;
+            width: 100%;
+            margin-top: 40px;
+            min-height: 400px;
+            border: 2px dashed #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #fafafa;
+        }
+
+        #certificateCanvas {
+            max-width: 100%;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+
+        .drag-text {
+            text-align: center;
+            color: #999;
+        }
+
+        #imageInput, #csvInput {
+            display: none;
+        }
+
+        .color-picker {
+            width: 100px;
+            padding: 5px;
+        }
+
+        .names-preview {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-height: 100px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .progress {
+            width: 0%;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+
+        .font-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .control-panel {
+                gap: 10px;
+            }
+
+            input, button {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="margin-bottom: 20px;">Certificate Generator</h1>
+        
+        <div class="control-panel">
+            <div class="input-group">
+                <label for="imageInput">Background Image:</label>
+                <button onclick="document.getElementById('imageInput').click()">Choose Image</button>
+                <input type="file" id="imageInput" accept="image/*">
+            </div>
+
+            <div class="input-group">
+                <label for="csvInput">Upload Names (CSV):</label>
+                <button onclick="document.getElementById('csvInput').click()">Upload CSV File</button>
+                <input type="file" id="csvInput" accept=".csv">
+                <div id="namesPreview" class="names-preview"></div>
+            </div>
+
+            <div class="input-group">
+                <label for="nameInput">Single Recipient Name:</label>
+                <input type="text" id="nameInput" placeholder="Enter name">
+            </div>
+
+            <!-- Issue Number Settings -->
+            <div class="input-group">
+                <label>Issue Number Settings:</label>
+                <input type="text" id="numberPrefix" placeholder="Prefix (e.g., CERT-)" value="CERT-">
+                <input type="number" id="startNumber" placeholder="Start Number" value="1" min="1">
+                <input type="number" id="numberPadding" placeholder="Padding Zeros" value="4" min="1" max="10">
+                
+                <!-- Position Controls -->
+                <div class="coordinate-controls">
+                    <label>Position:</label>
+                    <div>
+                        X: <input type="number" id="numberX" class="coordinate-input" value="50">
+                        Y: <input type="number" id="numberY" class="coordinate-input" value="150">
+                    </div>
+                </div>
+
+                <!-- Font Controls -->
+                <div class="font-controls">
+                    <input type="number" id="numberFontSize" placeholder="Font Size" value="20" min="8" max="72">
+                    <select id="numberFontFamily">
+                        <option value="Arial">Arial</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="Georgia">Georgia</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="textColor">Text Color:</label>
+                <input type="color" id="textColor" class="color-picker" value="#000000">
+            </div>
+
+            <button onclick="generateCertificate()">Generate Single Certificate</button>
+            <button id="generateBulkBtn" onclick="generateBulkCertificates()" disabled>Generate Bulk Certificates</button>
+            <button onclick="downloadCertificate()">Download Current Certificate</button>
+
+            <div id="progressBar" class="progress-bar">
+                <div id="progress" class="progress"></div>
+            </div>
+        </div>
+
+        <div class="certificate-container">
+            <canvas id="certificateCanvas"></canvas>
+            <div class="drag-text" id="dragText">
+                Upload a certificate template to begin
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('certificateCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageInput = document.getElementById('imageInput');
+        const csvInput = document.getElementById('csvInput');
+        const dragText = document.getElementById('dragText');
+        const namesPreview = document.getElementById('namesPreview');
+        const progressBar = document.getElementById('progressBar');
+        const progress = document.getElementById('progress');
+        let certificateImage = null;
+        let participantNames = [];
+
+        // Canvas click handler for position adjustment
+        canvas.addEventListener('click', function(e) {
+            if (!certificateImage) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const x = Math.round((e.clientX - rect.left) * scaleX);
+            const y = Math.round((e.clientY - rect.top) * scaleY);
+            
+            document.getElementById('numberX').value = x;
+            document.getElementById('numberY').value = y;
+            
+            generateCertificate();
+        });
+
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        certificateImage = img;
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        dragText.style.display = 'none';
+                        generateCertificate();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        csvInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const csvData = event.target.result;
+                    participantNames = csvData.split('\n')
+                        .map(name => name.trim())
+                        .filter(name => name.length > 0);
+                    
+                    namesPreview.style.display = 'block';
+                    namesPreview.innerHTML = `Loaded ${participantNames.length} names:<br>` +
+                        participantNames.slice(0, 5).join('<br>') +
+                        (participantNames.length > 5 ? '<br>...' : '');
+                    
+                    document.getElementById('generateBulkBtn').disabled = !certificateImage;
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function generateIssueNumber(index = 0) {
+            const prefix = document.getElementById('numberPrefix').value;
+            const startNum = parseInt(document.getElementById('startNumber').value);
+            const padding = parseInt(document.getElementById('numberPadding').value);
+            const number = startNum + index;
+            return `${prefix}${number.toString().padStart(padding, '0')}`;
+        }
+
+        function drawIssueNumber(issueNumber) {
+            const x = parseInt(document.getElementById('numberX').value);
+            const y = parseInt(document.getElementById('numberY').value);
+            const fontSize = parseInt(document.getElementById('numberFontSize').value);
+            const fontFamily = document.getElementById('numberFontFamily').value;
+            
+            ctx.font = `${fontSize}px ${fontFamily}`;
+            ctx.textAlign = 'left';
+            ctx.fillStyle = document.getElementById('textColor').value;
+
+            // Add subtle shadow
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+            ctx.shadowBlur = 2;
+            ctx.shadowOffsetX = 1;
+            ctx.shadowOffsetY = 1;
+            
+            ctx.fillText(issueNumber, x, y);
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+        }
+
+        function generateCertificate(name, index = 0) {
+            if (!certificateImage) return;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw background image
+            ctx.drawImage(certificateImage, 0, 0, canvas.width, canvas.height);
+
+            // Draw recipient name
+            const recipientName = (name || document.getElementById('nameInput').value).toUpperCase();
+            const nameSize = canvas.height * 0.08;
+            ctx.font = `bold ${nameSize}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = document.getElementById('textColor').value;
+            
+            // Add elegant shadow for name
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+            ctx.shadowBlur = 3;
+            ctx.shadowOffsetY = 1;
+            
+            // Center the name vertically
+            const nameY = canvas.height * 0.5;
+            ctx.fillText(recipientName, canvas.width / 2, nameY);
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Draw issue number
+            const issueNumber = generateIssueNumber(index);
+            drawIssueNumber(issueNumber);
+        }
+
+        async function generateBulkCertificates() {
+            if (!certificateImage || participantNames.length === 0) return;
+
+            progressBar.style.display = 'block';
+            const zip = new JSZip();
+
+            for (let i = 0; i < participantNames.length; i++) {
+                const name = participantNames[i];
+                generateCertificate(name, i);
+                
+                // Convert canvas to blob
+                const blob = await new Promise(resolve => canvas.toBlob(resolve));
+                zip.file(`certificate_${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`, blob);
+
+                // Update progress
+                progress.style.width = `${((i + 1) / participantNames.length) * 100}%`;
+            }
+
+            // Generate and download zip file
+            const content = await zip.generateAsync({type: "blob"});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = 'certificates.zip';
+            link.click();
+
+            // Hide progress bar after download starts
+            setTimeout(() => {
+                progressBar.style.display = 'none';
+                progress.style.width = '0%';
+            }, 1000);
+        }
+
+        function downloadCertificate() {
+            if (!certificateImage) return;
+
+            const link = document.createElement('a');
+            link.download = 'certificate.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Real-time updates for all controls
+        const updateControls = ['nameInput', 'textColor', 'numberPrefix', 'startNumber', 
+            'numberPadding', 'numberX', 'numberY', 'numberFontSize', 'numberFontFamily'];
+        
+        updateControls.forEach(controlId => {
+            const element = document.getElementById(controlId);
+            if (element) {
+                element.addEventListener('input', generateCertificate);
+                element.addEventListener('change', generateCertificate);
+            }
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+</html>
